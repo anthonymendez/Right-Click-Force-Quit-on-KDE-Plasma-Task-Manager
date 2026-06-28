@@ -55,3 +55,32 @@ After refactoring, custom user-space widgets crashed on startup with a QML load 
 *   **QML & JavaScript**: Used to extend the taskbar UI and trigger actions.
 *   **Plasma5Support (executable engine)**: Invoked to run `kill -9` commands asynchronously directly from the UI thread without blocking the desktop environment.
 *   **Bash & Diff/Patch Utility**: Leveraged to automate clean deployments, system restarts, and automated patching of upstream files.
+
+---
+
+## 🏷️ Release Management
+
+To publish updates and manage releases for this repository:
+
+### 1. Create a Tag
+To version the code, tag your latest commit locally and push it to GitHub:
+```bash
+git tag <tag_version>
+git push origin <tag_version>
+```
+*Example:*
+```bash
+git tag 0.1
+git push origin 0.1
+```
+
+### 2. Create a GitHub Release
+Use the GitHub CLI (`gh`) to create a formal release with release notes based on the tag:
+```bash
+gh release create <tag_version> --title "<release_title>" --notes "<release_description>"
+```
+*Example:*
+```bash
+gh release create 0.1 --title "v0.1.0" --notes "First release of Right-Click Force Quit on KDE Plasma Task Manager."
+```
+
