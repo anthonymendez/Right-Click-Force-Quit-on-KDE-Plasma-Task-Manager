@@ -54,6 +54,20 @@ Once installed, you must replace the default taskbar widgets with the custom one
 
 ---
 
+## Updating from Upstream KDE
+
+If you upgrade your KDE Plasma version and want to update the cloned widgets to match the latest upstream task manager code (while keeping the Force Quit feature intact), run:
+
+```bash
+./update-project-kde-taskbar.sh [version]
+```
+
+- If you don't pass a version (e.g. `6.7.1`), it will automatically detect your currently running `plasmashell` version.
+- The script clones `plasma-desktop`, checks out the target release tag, copies all necessary files into the project, and automatically applies the patch located in `patches/force-quit.patch`.
+- After updating, run `./install.sh` to redeploy.
+
+---
+
 ## Uninstallation
 
 To completely remove the custom widgets:
