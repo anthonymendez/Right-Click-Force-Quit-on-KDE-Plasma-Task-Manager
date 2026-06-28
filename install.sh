@@ -16,34 +16,36 @@ fi
 
 # Target directories
 BASE_TARGET_DIR="$HOME/.local/share/plasma/plasmoids"
+SHARED_TARGET_DIR="$BASE_TARGET_DIR/org.kde.plasma.taskmanager"
 ICON_TARGET_DIR="$BASE_TARGET_DIR/org.kde.plasma.icontasks.custom"
 TASK_TARGET_DIR="$BASE_TARGET_DIR/org.kde.plasma.taskmanager.custom"
 
-# Clear old/broken system shadow directory if it exists
-if [ -d "$BASE_TARGET_DIR/org.kde.plasma.taskmanager" ]; then
-    echo "Cleaning up old/broken shadow directory..."
-    rm -rf "$BASE_TARGET_DIR/org.kde.plasma.taskmanager"
-fi
-
 # Function to deploy a custom plasmoid
-deploy_plasmoid() {
-    local target="$1"
-    local name="$2"
-    local metadata_src="$3"
+deploy_widgets() {
+    # 1. Clean up and deploy the shared QML and config files to the root path directory.
+    # Plasmashell requires this path to load the C++ backend plugin while overriding QML.
+    echo "Deploying shared QML and configuration to $SHARED_TARGET_DIR..."
+    rm -rf "$SHARED_TARGET_DIR"
+    mkdir -p "$SHARED_TARGET_DIR/contents/ui"
+    mkdir -p "$SHARED_TARGET_DIR/contents/config"
+    cp -r "$SRC_DIR/qml/"* "$SHARED_TARGET_DIR/contents/ui/"
+    cp "$SRC_DIR/main.xml" "$SHARED_TARGET_DIR/contents/config/main.xml"
 
-    echo "Deploying $name to $target..."
-    mkdir -p "$target/contents/ui"
-    mkdir -p "$target/contents/config"
-    cp "$metadata_src" "$target/metadata.json"
-    cp -r "$SRC_DIR/qml/"* "$target/contents/ui/"
-    cp "$SRC_DIR/main.xml" "$target/contents/config/main.xml"
+    # 2. Deploy custom Icons-Only metadata
+    echo "Deploying Icons-Only metadata to $ICON_TARGET_DIR..."
+    rm -rf "$ICON_TARGET_DIR"
+    mkdir -p "$ICON_TARGET_DIR"
+    cp "$SRC_DIR/metadata-icontasks.json" "$ICON_TARGET_DIR/metadata.json"
+
+    # 3. Deploy custom Task Manager metadata
+    echo "Deploying Task Manager metadata to $TASK_TARGET_DIR..."
+    rm -rf "$TASK_TARGET_DIR"
+    mkdir -p "$TASK_TARGET_DIR"
+    cp "$SRC_DIR/metadata-taskmanager.json" "$TASK_TARGET_DIR/metadata.json"
 }
 
-# Deploy Icons-Only version
-deploy_plasmoid "$ICON_TARGET_DIR" "Icons-Only Task Manager (Force Quit)" "$SRC_DIR/metadata-icontasks.json"
-
-# Deploy Task Manager (Icons & Text) version
-deploy_plasmoid "$TASK_TARGET_DIR" "Task Manager (Force Quit)" "$SRC_DIR/metadata-taskmanager.json"
+# Run deployment
+deploy_widgets
 
 # Clean up temp folder if it was created
 if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
