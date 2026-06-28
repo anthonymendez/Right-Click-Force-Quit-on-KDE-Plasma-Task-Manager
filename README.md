@@ -1,5 +1,7 @@
 # KDE Plasma Taskbar "Force Quit" Context Menu Option
 
+> 💡 **Note**: This project was vibe-coded using Google Gemini, based on the implementation discussed in [this KDE discuss thread](https://discuss.kde.org/t/qml-changing-the-taskbar-context-menu-close-button-to-kill-the-app/43752/7).
+
 Adds a **Force Quit** (or **Force Quit All** for grouped windows) option to the right-click context menu of applications in the KDE Plasma 6 taskbar.
 
 This is implemented as two custom, user-space widgets:
