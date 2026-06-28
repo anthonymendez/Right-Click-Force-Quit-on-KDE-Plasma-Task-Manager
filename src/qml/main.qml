@@ -20,6 +20,7 @@ import org.kde.plasma.workspace.trianglemousefilter
 import org.kde.taskmanager as TaskManager
 import plasma.applet.org.kde.plasma.taskmanager as TaskManagerApplet
 import org.kde.plasma.workspace.dbus as DBus
+import "kde-taskbar"
 
 PlasmoidItem {
     id: tasks
@@ -37,8 +38,8 @@ PlasmoidItem {
     property Task toolTipOpenedByClick
     property Task toolTipAreaItem
 
-    readonly property Component contextMenuComponent: Qt.createComponent("ContextMenu.qml")
-    readonly property Component pulseAudioComponent: Qt.createComponent("PulseAudio.qml")
+    readonly property Component contextMenuComponent: Qt.createComponent("kde-taskbar/ContextMenu.qml")
+    readonly property Component pulseAudioComponent: Qt.createComponent("kde-taskbar/PulseAudio.qml")
 
     property alias taskList: taskList
 
@@ -504,7 +505,7 @@ PlasmoidItem {
         }
     }
 
-    readonly property Component groupDialogComponent: Qt.createComponent("GroupDialog.qml")
+    readonly property Component groupDialogComponent: Qt.createComponent("kde-taskbar/GroupDialog.qml")
     property GroupDialog groupDialog
 
     readonly property bool supportsLaunchers: true

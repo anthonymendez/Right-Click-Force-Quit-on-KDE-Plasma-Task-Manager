@@ -32,7 +32,7 @@ deploy_plasmoid() {
     local metadata_src="$3"
 
     echo "Deploying $name to $target..."
-    mkdir -p "$target/contents/ui/code"
+    mkdir -p "$target/contents/ui"
     mkdir -p "$target/contents/config"
     cp "$metadata_src" "$target/metadata.json"
     cp -r "$SRC_DIR/qml/"* "$target/contents/ui/"
