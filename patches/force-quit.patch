@@ -1,0 +1,189 @@
+--- original/src/qml/main.qml	2026-06-28 12:33:12.407792600 -0700
++++ src/qml/main.qml	2026-06-28 12:30:36.471514800 -0700
+@@ -20,6 +20,7 @@
+ import org.kde.taskmanager as TaskManager
+ import plasma.applet.org.kde.plasma.taskmanager as TaskManagerApplet
+ import org.kde.plasma.workspace.dbus as DBus
++import "kde-taskbar"
+ 
+ PlasmoidItem {
+     id: tasks
+@@ -32,13 +33,13 @@
+ 
+     readonly property bool shouldShrinkToZero: tasksModel.count === 0
+     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+-    readonly property bool iconsOnly: Plasmoid.pluginName === "org.kde.plasma.icontasks"
++    readonly property bool iconsOnly: Plasmoid.pluginName.indexOf("icontasks") !== -1
+ 
+     property Task toolTipOpenedByClick
+     property Task toolTipAreaItem
+ 
+-    readonly property Component contextMenuComponent: Qt.createComponent("ContextMenu.qml")
+-    readonly property Component pulseAudioComponent: Qt.createComponent("PulseAudio.qml")
++    readonly property Component contextMenuComponent: Qt.createComponent("kde-taskbar/ContextMenu.qml")
++    readonly property Component pulseAudioComponent: Qt.createComponent("kde-taskbar/PulseAudio.qml")
+ 
+     property alias taskList: taskList
+ 
+@@ -504,7 +505,7 @@
+         }
+     }
+ 
+-    readonly property Component groupDialogComponent: Qt.createComponent("GroupDialog.qml")
++    readonly property Component groupDialogComponent: Qt.createComponent("kde-taskbar/GroupDialog.qml")
+     property GroupDialog groupDialog
+ 
+     readonly property bool supportsLaunchers: true
+--- original/src/qml/kde-taskbar/ContextMenu.qml	2026-06-28 12:33:12.408792700 -0700
++++ src/qml/kde-taskbar/ContextMenu.qml	2026-06-28 11:48:06.436387400 -0700
+@@ -808,4 +808,59 @@
+             tasksModel.requestClose(menu.modelIndex);
+         }
+     }
++
++    PlasmaExtras.MenuItem {
++        id: forceQuitItem
++        visible: (menu.visualParent && !menu.get(TaskManager.AbstractTasksModel.IsLauncher) && !menu.get(TaskManager.AbstractTasksModel.IsStartup))
++        enabled: menu.visualParent
++        text: menu.get(TaskManager.AbstractTasksModel.IsGroupParent) ? "Force Quit All" : "Force Quit"
++        icon: "process-stop"
++
++        onClicked: {
++            if (tasks.groupDialog !== null && tasks.groupDialog.visualParent === menu.visualParent) {
++                tasks.groupDialog.visible = false;
++            }
++
++            const pids = [];
++            if (menu.get(TaskManager.AbstractTasksModel.IsGroupParent)) {
++                TaskManagerApplet.TaskTools.foreachChildTask((childIndex) => {
++                    const pid = tasksModel.data(childIndex, TaskManager.AbstractTasksModel.AppPid);
++                    if (pid > 0 && pids.indexOf(pid) === -1) {
++                        pids.push(pid);
++                    }
++                }, menu.modelIndex, tasksModel);
++            } else {
++                const pid = menu.get(TaskManager.AbstractTasksModel.AppPid);
++                if (pid > 0) {
++                    pids.push(pid);
++                }
++            }
++
++            if (pids.length > 0) {
++                const exec = Qt.createQmlObject(`
++                    import QtQuick
++                    import org.kde.plasma.plasma5support as Plasma5Support
++                    Plasma5Support.DataSource {
++                        engine: "executable"
++                        connectedSources: []
++                        onNewData: function(sourceName, data) {
++                            disconnectSource(sourceName);
++                            destroy();
++                        }
++                        function exec(cmd) {
++                            connectSource(cmd);
++                        }
++                    }
++                `, menu);
++
++                if (exec) {
++                    pids.forEach((pid) => {
++                        exec.exec("kill -9 " + pid);
++                    });
++                }
++            }
++
++            tasksModel.requestClose(menu.modelIndex);
++        }
++    }
+ }
+--- original/src/qml/kde-taskbar/ConfigAppearance.qml	2026-06-28 12:33:12.408792700 -0700
++++ src/qml/kde-taskbar/ConfigAppearance.qml	2026-06-28 11:58:31.278881700 -0700
+@@ -17,7 +17,7 @@
+ 
+     readonly property bool plasmaPaAvailable: Qt.createComponent("PulseAudio.qml").status === Component.Ready
+     readonly property bool plasmoidVertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+-    readonly property bool iconOnly: Plasmoid.pluginName === "org.kde.plasma.icontasks"
++    readonly property bool iconOnly: Plasmoid.pluginName.indexOf("icontasks") !== -1
+ 
+     property alias cfg_showToolTips: showToolTips.checked
+     property alias cfg_highlightWindows: highlightWindows.checked
+--- original/src/qml/kde-taskbar/ConfigBehavior.qml	2026-06-28 12:33:12.409792700 -0700
++++ src/qml/kde-taskbar/ConfigBehavior.qml	2026-06-28 11:58:37.456978800 -0700
+@@ -104,14 +104,14 @@
+ 
+         QQC2.CheckBox {
+             id: groupPopups
+-            visible: (Plasmoid.pluginName !== "org.kde.plasma.icontasks")
++            visible: (Plasmoid.pluginName.indexOf("icontasks") === -1)
+             text: i18nc("@option:check grouped task", "Combine into single button")
+             enabled: groupingStrategy.currentIndex > 0
+         }
+ 
+         QQC2.CheckBox {
+             id: onlyGroupWhenFull
+-            visible: (Plasmoid.pluginName !== "org.kde.plasma.icontasks")
++            visible: (Plasmoid.pluginName.indexOf("icontasks") === -1)
+             text: i18nc("@option:check grouped task","Group only when the Task Manager is full")
+             enabled: groupingStrategy.currentIndex > 0 && groupPopups.checked
+             Accessible.onPressAction: toggle()
+@@ -119,7 +119,7 @@
+ 
+         Item {
+             Kirigami.FormData.isSection: true
+-            visible: (Plasmoid.pluginName !== "org.kde.plasma.icontasks")
++            visible: (Plasmoid.pluginName.indexOf("icontasks") === -1)
+         }
+ 
+         QQC2.ComboBox {
+@@ -161,20 +161,20 @@
+ 
+         QQC2.CheckBox {
+             id: separateLaunchers
+-            visible: (Plasmoid.pluginName !== "org.kde.plasma.icontasks")
++            visible: (Plasmoid.pluginName.indexOf("icontasks") === -1)
+             text: i18nc("@option:check configure task sorting", "Keep launchers separate")
+             enabled: sortingStrategy.currentValue === TaskManager.TasksModel.SortManual
+         }
+ 
+         QQC2.CheckBox {
+             id: hideLauncherOnStart
+-            visible: (Plasmoid.pluginName !== "org.kde.plasma.icontasks")
++            visible: (Plasmoid.pluginName.indexOf("icontasks") === -1)
+             text: i18nc("@option:check for icons-and-text task manager", "Hide launchers after application startup")
+         }
+ 
+         Item {
+             Kirigami.FormData.isSection: true
+-            visible: (Plasmoid.pluginName !== "org.kde.plasma.icontasks")
++            visible: (Plasmoid.pluginName.indexOf("icontasks") === -1)
+         }
+ 
+         QQC2.CheckBox {
+--- original/src/qml/kde-taskbar/TaskBadgeOverlay.qml	2026-06-28 12:33:12.409792700 -0700
++++ src/qml/kde-taskbar/TaskBadgeOverlay.qml	2026-06-28 11:58:25.567791700 -0700
+@@ -15,7 +15,7 @@
+     readonly property bool verySmallIcon:
+         icon.width < Kirigami.Units.iconSizes.smallMedium ||
+         icon.height < Kirigami.Units.iconSizes.smallMedium
+-    readonly property bool shiftBadgeDown: (Plasmoid.pluginName === "org.kde.plasma.icontasks") && task.audioStreamIcon !== null
++    readonly property bool shiftBadgeDown: tasks.iconsOnly && task.audioStreamIcon !== null
+     readonly property int badgeMaskY: shiftBadgeDown ? root.height - badgeRect.height : 0
+     readonly property int offset: Math.round(Math.max(Kirigami.Units.smallSpacing / 2, badgeMask.width / 32))
+     readonly property int extraHorizontalOffset: verySmallIcon && badgeRect.text.length > 2 ? -2 : 0
+--- original/src/qml/kde-taskbar/code/LayoutMetrics.js	2026-06-28 12:33:12.409792700 -0700
++++ src/qml/kde-taskbar/code/LayoutMetrics.js	2026-06-28 11:58:43.078067200 -0700
+@@ -10,12 +10,12 @@
+ const labelMargin = Kirigami.Units.smallSpacing;
+ 
+ function horizontalMargins() {
+-    const spacingAdjustment = (tasks.plasmoid.pluginName === "org.kde.plasma.icontasks") ? tasks.plasmoid.configuration.iconSpacing : 1
++    const spacingAdjustment = tasks.iconsOnly ? tasks.plasmoid.configuration.iconSpacing : 1
+     return (taskFrame.margins.left + taskFrame.margins.right) * (tasks.vertical ? 1 : spacingAdjustment);
+ }
+ 
+ function verticalMargins() {
+-    const spacingAdjustment = (tasks.plasmoid.pluginName === "org.kde.plasma.icontasks") ? tasks.plasmoid.configuration.iconSpacing : 1
++    const spacingAdjustment = tasks.iconsOnly ? tasks.plasmoid.configuration.iconSpacing : 1
+     return (taskFrame.margins.top + taskFrame.margins.bottom) * (tasks.vertical ? spacingAdjustment : 1);
+ }
+ 
