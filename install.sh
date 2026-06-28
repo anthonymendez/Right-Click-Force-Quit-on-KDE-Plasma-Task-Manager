@@ -16,32 +16,40 @@ fi
 
 # Target directories
 BASE_TARGET_DIR="$HOME/.local/share/plasma/plasmoids"
-SHARED_TARGET_DIR="$BASE_TARGET_DIR/org.kde.plasma.taskmanager"
-ICON_TARGET_DIR="$BASE_TARGET_DIR/org.kde.plasma.icontasks.custom"
-TASK_TARGET_DIR="$BASE_TARGET_DIR/org.kde.plasma.taskmanager.custom"
+SHARED_SYSTEM_DIR="$BASE_TARGET_DIR/org.kde.plasma.taskmanager"
+ICON_SYSTEM_DIR="$BASE_TARGET_DIR/org.kde.plasma.icontasks"
+ICON_CUSTOM_DIR="$BASE_TARGET_DIR/org.kde.plasma.icontasks.custom"
+TASK_CUSTOM_DIR="$BASE_TARGET_DIR/org.kde.plasma.taskmanager.custom"
 
-# Function to deploy a custom plasmoid
+# Function to deploy custom widgets
 deploy_widgets() {
-    # 1. Clean up and deploy the shared QML and config files to the root path directory.
-    # Plasmashell requires this path to load the C++ backend plugin while overriding QML.
-    echo "Deploying shared QML and configuration to $SHARED_TARGET_DIR..."
-    rm -rf "$SHARED_TARGET_DIR"
-    mkdir -p "$SHARED_TARGET_DIR/contents/ui"
-    mkdir -p "$SHARED_TARGET_DIR/contents/config"
-    cp -r "$SRC_DIR/qml/"* "$SHARED_TARGET_DIR/contents/ui/"
-    cp "$SRC_DIR/main.xml" "$SHARED_TARGET_DIR/contents/config/main.xml"
+    # 1. Clean up system shadowing directories to fully restore original system widgets
+    if [ -d "$SHARED_SYSTEM_DIR" ]; then
+        echo "Removing local Task Manager system shadow folder: $SHARED_SYSTEM_DIR..."
+        rm -rf "$SHARED_SYSTEM_DIR"
+    fi
+    if [ -d "$ICON_SYSTEM_DIR" ]; then
+        echo "Removing local Icons-Only system shadow folder: $ICON_SYSTEM_DIR..."
+        rm -rf "$ICON_SYSTEM_DIR"
+    fi
 
-    # 2. Deploy custom Icons-Only metadata
-    echo "Deploying Icons-Only metadata to $ICON_TARGET_DIR..."
-    rm -rf "$ICON_TARGET_DIR"
-    mkdir -p "$ICON_TARGET_DIR"
-    cp "$SRC_DIR/metadata-icontasks.json" "$ICON_TARGET_DIR/metadata.json"
+    # 2. Deploy custom Icons-Only Task Manager (Force Quit)
+    echo "Deploying custom Icons-Only Task Manager to $ICON_CUSTOM_DIR..."
+    rm -rf "$ICON_CUSTOM_DIR"
+    mkdir -p "$ICON_CUSTOM_DIR/contents/ui"
+    mkdir -p "$ICON_CUSTOM_DIR/contents/config"
+    cp -r "$SRC_DIR/qml/"* "$ICON_CUSTOM_DIR/contents/ui/"
+    cp "$SRC_DIR/main.xml" "$ICON_CUSTOM_DIR/contents/config/main.xml"
+    cp "$SRC_DIR/metadata-icontasks.json" "$ICON_CUSTOM_DIR/metadata.json"
 
-    # 3. Deploy custom Task Manager metadata
-    echo "Deploying Task Manager metadata to $TASK_TARGET_DIR..."
-    rm -rf "$TASK_TARGET_DIR"
-    mkdir -p "$TASK_TARGET_DIR"
-    cp "$SRC_DIR/metadata-taskmanager.json" "$TASK_TARGET_DIR/metadata.json"
+    # 3. Deploy custom Task Manager (Force Quit)
+    echo "Deploying custom Task Manager to $TASK_CUSTOM_DIR..."
+    rm -rf "$TASK_CUSTOM_DIR"
+    mkdir -p "$TASK_CUSTOM_DIR/contents/ui"
+    mkdir -p "$TASK_CUSTOM_DIR/contents/config"
+    cp -r "$SRC_DIR/qml/"* "$TASK_CUSTOM_DIR/contents/ui/"
+    cp "$SRC_DIR/main.xml" "$TASK_CUSTOM_DIR/contents/config/main.xml"
+    cp "$SRC_DIR/metadata-taskmanager.json" "$TASK_CUSTOM_DIR/metadata.json"
 }
 
 # Run deployment

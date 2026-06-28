@@ -39,10 +39,15 @@ To ensure the widgets stay up to date when the user upgrades KDE Plasma:
 *   We created [update-project-kde-taskbar.sh](file:///run/media/anthony/Roommate/Projects/kde-plasma-right-click-force-quit/update-project-kde-taskbar.sh). It automatically detects the active `plasmashell` version, clones the exact release files from upstream KDE, structures them in our custom layout, and applies a unified patch file.
 *   We generated the patch under [patches/force-quit.patch](file:///run/media/anthony/Roommate/Projects/kde-plasma-right-click-force-quit/patches/force-quit.patch) to carry over all Force Quit QML injections and name detections cleanly.
 
-### Phase 6: Dynamic QML Module Dependency & RootPath Inheritance
-After refactoring, the widget crashed on startup with a QML load error: `module "plasma.applet.org.kde.plasma.taskmanager" is not installed`. When resolved by adding `X-Plasma-RootPath`, the custom widget loaded but incorrectly displayed text labels next to the icons (acting like the standard task manager).
-*   **The Discovery**: The C++ plugin `/usr/lib/qt6/plugins/plasma/applets/org.kde.plasma.taskmanager.so` registers the QML module. If we load our widgets as QML-only, the module is missing. Adding `X-Plasma-RootPath: org.kde.plasma.taskmanager` loads the plugin, but tells KPackage to redirect all QML lookups to the root path `org.kde.plasma.taskmanager`. Since our custom files were placed in the `.custom` directory, they were ignored, and Plasmashell loaded the default system QML resources (resulting in icons showing text).
-*   **The Fix**: We restructured the deployment in `install.sh`. The modified QML and JS files are now installed directly to the shared local directory `~/.local/share/plasma/plasmoids/org.kde.plasma.taskmanager/`. The custom widgets (`org.kde.plasma.icontasks.custom` and `org.kde.plasma.taskmanager.custom`) only contain their respective `metadata.json` referencing `org.kde.plasma.taskmanager` as their `X-Plasma-RootPath`. At runtime, they successfully inherit and load our custom files from disk, initialize the C++ backend, and evaluate `Plasmoid.pluginName` based on their unique package ID (hiding text for the icons-only taskbar and showing it for the standard taskbar).
+### Phase 6: Custom Widget Autonomy & QML Module Redirection
+After refactoring, custom user-space widgets crashed on startup with a QML load error: `module "plasma.applet.org.kde.plasma.taskmanager" is not installed` if no default task manager was present on the panel.
+*   **The Discovery**: The C++ plugin `/usr/lib/qt6/plugins/plasma/applets/org.kde.plasma.taskmanager.so` is responsible for registering the dynamic `plasma.applet.org.kde.plasma.taskmanager` QML module. Plasmashell only loads this plugin library if the C++ class factory recognizes the active applet ID (which is hardcoded to `org.kde.plasma.taskmanager` and `org.kde.plasma.icontasks`). Custom IDs (like `.custom`) prevent the factory from matching and fall back to QML-only loaders. If the default widget is not on the panel, the C++ library is not loaded at all, causing type registration to fail.
+*   **The Fix**: We created a QML module redirection folder structure `plasma/applet/org/kde/plasma/taskmanager` under our QML source assets. Inside it, we wrote a standard `qmldir` file that explicitly links the module to the system's compiled C++ plugin library:
+    ```qmldir
+    module plasma.applet.org.kde.plasma.taskmanager
+    plugin org.kde.plasma.taskmanager /usr/lib/qt6/plugins/plasma/applets/
+    ```
+    This redirects the QML engine's import system to load the system C++ plugin library directly for our custom widgets. This makes them fully independent widgets that can be used without any modifications or shadowing of the default system widgets.
 
 ---
 
