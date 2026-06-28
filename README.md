@@ -17,7 +17,7 @@ These widgets clone the default Plasma 6 Task Managers but inject an asynchronou
 To download, install both custom widgets, and reload the widget cache, run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/anthonymendez/kde-plasma-right-click-force-quit/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/anthonymendez/Right-Click-Force-Quit-on-KDE-Plasma-Task-Manager/main/install.sh | bash
 ```
 
 ### Manual Install (Local Repo Clone)

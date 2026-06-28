@@ -10,7 +10,7 @@ if [ -d "$SCRIPT_DIR/src" ]; then
 else
     echo "Not running from within the repository. Cloning from GitHub..."
     TEMP_DIR=$(mktemp -d)
-    git clone --depth 1 https://github.com/anthonymendez/kde-plasma-right-click-force-quit.git "$TEMP_DIR"
+    git clone --depth 1 https://github.com/anthonymendez/Right-Click-Force-Quit-on-KDE-Plasma-Task-Manager.git "$TEMP_DIR"
     SRC_DIR="$TEMP_DIR/src"
 fi
 
