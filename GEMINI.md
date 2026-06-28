@@ -39,6 +39,11 @@ To ensure the widgets stay up to date when the user upgrades KDE Plasma:
 *   We created [update-project-kde-taskbar.sh](file:///run/media/anthony/Roommate/Projects/kde-plasma-right-click-force-quit/update-project-kde-taskbar.sh). It automatically detects the active `plasmashell` version, clones the exact release files from upstream KDE, structures them in our custom layout, and applies a unified patch file.
 *   We generated the patch under [patches/force-quit.patch](file:///run/media/anthony/Roommate/Projects/kde-plasma-right-click-force-quit/patches/force-quit.patch) to carry over all Force Quit QML injections and name detections cleanly.
 
+### Phase 6: Dynamic QML Module Dependency (`plasma.applet.org.kde.plasma.taskmanager`)
+After refactoring, the widget crashed on startup with a QML load error: `module "plasma.applet.org.kde.plasma.taskmanager" is not installed`.
+*   **The Discovery**: The C++ plugin `/usr/lib/qt6/plugins/plasma/applets/org.kde.plasma.taskmanager.so` is responsible for registering the `plasma.applet.org.kde.plasma.taskmanager` QML module. Because our custom applets had unique IDs, Plasmashell loaded them as QML-only widgets and did not load the C++ plugin library, leading to import failures if no default task manager was running on the panel.
+*   **The Fix**: We added `"X-Plasma-RootPath": "org.kde.plasma.taskmanager"` to our metadata JSON files. This links the custom widgets to the system's C++ taskmanager plugin so that the QML module is registered, while KPackage still resolves and loads the modified QML files from our custom user directories.
+
 ---
 
 ## 📄 Key Technologies Used
