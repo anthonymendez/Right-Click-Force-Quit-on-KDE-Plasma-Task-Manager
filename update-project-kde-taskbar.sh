@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Determine target git reference (tag or branch)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd 2>/dev/null || pwd)"
+TEMP_DIR="$SCRIPT_DIR/tmp_update_git"
+CLONE_ERR_LOG="$SCRIPT_DIR/tmp_git_clone_err.log"
+
+# Cleanup handler to remove temporary folders/files on exit
+cleanup() {
+    if [ -d "$TEMP_DIR" ] || [ -f "$CLONE_ERR_LOG" ]; then
+        echo "Cleaning up temporary files..."
+        rm -rf "$TEMP_DIR"
+        rm -f "$CLONE_ERR_LOG"
+    fi
+}
+trap cleanup EXIT
+
+# Determine target version/branch
 TARGET_VERSION=""
 if [ "${1:-}" != "" ]; then
     TARGET_VERSION="$1"
@@ -18,26 +32,51 @@ else
 fi
 
 # Remove leading 'v' if present to normalize
-TARGET_VERSION=$(echo "$TARGET_VERSION" | sed 's/^v*//')
+NORM_VERSION=$(echo "$TARGET_VERSION" | sed 's/^v*//')
 
-# Construct git ref (prefix with 'v' if it looks like a version number, e.g. 6.7.1)
-if [[ "$TARGET_VERSION" =~ ^[0-9] ]]; then
-    GIT_REF="v$TARGET_VERSION"
+# Construct list of candidate references to try
+REFS_TO_TRY=()
+if [[ "$NORM_VERSION" =~ ^[0-9] ]]; then
+    REFS_TO_TRY+=("v$NORM_VERSION")
+    REFS_TO_TRY+=("$NORM_VERSION")
+    
+    # Add major.minor Plasma release branch as a fallback (e.g. Plasma/6.7)
+    if [[ "$NORM_VERSION" =~ ^([0-9]+)\.([0-9]+) ]]; then
+        MAJOR="${BASH_REMATCH[1]}"
+        MINOR="${BASH_REMATCH[2]}"
+        REFS_TO_TRY+=("Plasma/$MAJOR.$MINOR")
+    fi
 else
-    GIT_REF="$TARGET_VERSION"
+    REFS_TO_TRY+=("$TARGET_VERSION")
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd 2>/dev/null || pwd)"
-TEMP_DIR="$SCRIPT_DIR/tmp_update_git"
+echo "Updating taskbar files from KDE plasma-desktop repo..."
 
-echo "Updating taskbar files from KDE plasma-desktop repo (ref: $GIT_REF)..."
-
-# Ensure clean temp directory
+# Ensure clean temp directory and log files at start
 rm -rf "$TEMP_DIR"
+rm -f "$CLONE_ERR_LOG"
 
-# Clone the specified ref
-if ! git clone -b "$GIT_REF" --depth 1 https://github.com/KDE/plasma-desktop.git "$TEMP_DIR"; then
-    echo "Error: Failed to clone plasma-desktop reference: $GIT_REF"
+CLONED=false
+GIT_REF=""
+for REF in "${REFS_TO_TRY[@]}"; do
+    echo "Attempting to clone ref: $REF..."
+    if git clone -b "$REF" --depth 1 https://github.com/KDE/plasma-desktop.git "$TEMP_DIR" 2>"$CLONE_ERR_LOG"; then
+        echo "Successfully cloned ref: $REF"
+        CLONED=true
+        GIT_REF="$REF"
+        break
+    else
+        echo "Ref '$REF' not found or failed to clone."
+    fi
+done
+
+if [ "$CLONED" = false ]; then
+    echo "Error: Failed to clone any of the references: ${REFS_TO_TRY[*]}"
+    if [ -f "$CLONE_ERR_LOG" ]; then
+        echo "------------------- Git Error -------------------"
+        cat "$CLONE_ERR_LOG"
+        echo "-------------------------------------------------"
+    fi
     exit 1
 fi
 
@@ -64,14 +103,8 @@ else
     echo "This usually happens when upstream KDE QML files changed significantly."
     echo "You will need to manually resolve conflicts."
     echo "--------------------------------------------------------"
-    # Clean up temp folder before exiting
-    rm -rf "$TEMP_DIR"
     exit 1
 fi
-
-# Clean up temp folder
-echo "Cleaning up temporary files..."
-rm -rf "$TEMP_DIR"
 
 echo "--------------------------------------------------------"
 echo "Project update complete!"
