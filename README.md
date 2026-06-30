@@ -1,5 +1,7 @@
 # KDE Plasma Taskbar "Force Quit" Context Menu Option
 
+![Screenshot](imgs/image.png)
+
 > **WARNING**: This project is still a WIP and is not working as intended or very buggy as you're reading this. Use at your own risk.
 
 > 💡 **Note**: This project was vibe-coded using Google Gemini, based on the implementation discussed in [this KDE discuss thread](https://discuss.kde.org/t/qml-changing-the-taskbar-context-menu-close-button-to-kill-the-app/43752/7).
